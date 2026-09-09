@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>接力亂畫大會 · 課間互動遊戲</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --ink:#241B3A;
+    --paper:#FFF9EE;
+    --purple:#2B2440;
+    --purple-2:#3C3260;
+    --yellow:#FFD23F;
+    --coral:#FF6B5E;
+    --mint:#3FCFB0;
+    --sky:#5EB8FF;
+    --card:#FFFDF7;
+    --line:#241B3A;
+    --shadow: 6px 6px 0 rgba(36,27,58,0.9);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Noto Sans TC', sans-serif;
+    background:var(--purple);
+    color:var(--ink);
+    min-height:100vh;
+    background-image:
+      radial-gradient(circle at 10% 15%, rgba(255,210,63,0.10) 0, transparent 40%),
+      radial-gradient(circle at 90% 85%, rgba(63,207,176,0.12) 0, transparent 45%);
+  }
+  h1,h2,h3{font-family:'Baloo 2', sans-serif; margin:0 0 8px;}
+  button{
+    font-family:'Baloo 2', sans-serif;
+    cursor:pointer;
+    border:3px solid var(--line);
+    background:var(--yellow);
+    color:var(--ink);
+    padding:10px 18px;
+    border-radius:12px;
+    font-size:15px;
+    font-weight:700;
+    box-shadow:var(--shadow);
+    transition:transform .08s ease;
+  }
+  button:active{transform:translate(3px,3px); box-shadow:2px 2px 0 rgba(36,27,58,0.9);}
+  button.secondary{background:var(--card);}
+  button.mint{background:var(--mint);}
+  button.coral{background:var(--coral); color:#fff;}
+  button.sky{background:var(--sky);}
+  button:disabled{opacity:.4; cursor:not-allowed; box-shadow:none; transform:none;}
+  input,select,textarea{
+    font-family:'Noto Sans TC', sans-serif;
+    border:2px solid var(--line);
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:15px;
+    background:#fff;
+  }
+  .app{max-width:1100px; margin:0 auto; padding:24px 16px 60px;}
+  .brand{
+    display:flex; align-items:center; gap:12px; color:var(--paper); margin-bottom:22px;
+  }
+  .brand .dot{width:14px;height:14px;border-radius:50%;background:var(--coral); box-shadow:0 0 0 4px rgba(255,107,94,0.25);}
+  .brand h1{color:var(--paper); font-size:22px;}
+  .card{
+    background:var(--card);
+    border:3px solid var(--line);
+    border-radius:20px;
+    box-shadow:var(--shadow);
+    padding:22px;
+    margin-bottom:20px;
+  }
+  .role-grid{display:grid; grid-template-columns:1fr; gap:16px; max-width:520px; margin:60px auto;}
+  @media(min-width:640px){.role-grid{grid-template-columns:1fr 1fr 1fr; max-width:900px;}}
+  .role-card{
+    background:var(--card); border:3px solid var(--line); border-radius:20px; padding:26px 18px;
+    text-align:center; box-shadow:var(--shadow); cursor:pointer;
+  }
+  .role-card:hover{transform:translate(-2px,-2px); box-shadow:8px 8px 0 rgba(36,27,58,0.9);}
+  .role-card .emoji{font-size:40px; display:block; margin-bottom:10px;}
+  .tabs{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px;}
+  .tab{padding:8px 16px; border-radius:999px; border:2px solid var(--line); background:transparent; color:var(--paper); font-family:'Baloo 2'; font-weight:700; cursor:pointer;}
+  .tab.active{background:var(--yellow); color:var(--ink);}
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  .pill{display:inline-block; padding:3px 10px; border-radius:999px; background:var(--purple); color:#fff; font-size:12px; font-weight:700;}
+  table{width:100%; border-collapse:collapse; font-size:14px;}
+  th,td{border-bottom:2px solid #eee; text-align:left; padding:6px 8px;}
+  th{font-family:'Baloo 2'; color:var(--purple-2);}
+  .bank-cat{border:2px dashed var(--line); border-radius:14px; padding:12px; margin-bottom:12px; background:#fff;}
+  .bank-cat h3{font-size:15px; color:var(--purple-2);}
+  .chip{display:inline-flex; align-items:center; gap:6px; background:var(--paper); border:2px solid var(--line); border-radius:999px; padding:4px 10px 4px 12px; margin:3px; font-size:13px;}
+  .chip button{padding:0 6px; font-size:12px; border-radius:50%; box-shadow:none; border:none; background:transparent;}
+  .progress-wrap{display:flex; align-items:center; gap:8px;}
+  .progress-bar{flex:1; height:10px; background:#eee; border-radius:6px; overflow:hidden; border:2px solid var(--line);}
+  .progress-fill{height:100%; background:var(--mint);}
+  .canvas-frame{border:4px dashed var(--line); border-radius:16px; background:#fff; padding:8px; display:inline-block;}
+  canvas{touch-action:none; display:block; background:#fff; border-radius:10px; max-width:100%;}
+  .dialogue-bubble{
+    position:absolute;
+    background:var(--yellow);
+    border:3px solid var(--line);
+    border-radius:12px;
+    padding:6px 14px;
+    font-weight:700;
+    font-size:15px;
+    cursor:grab;
+    user-select:none;
+    white-space:nowrap;
+    box-shadow:var(--shadow);
+    z-index:5;
+  }
+  .dialogue-bubble:active{cursor:grabbing;}
+  .toolbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:10px 0;}
+  .swatch{width:28px;height:28px;border-radius:50%;border:3px solid var(--line); cursor:pointer;}
+  .swatch.active{outline:3px solid var(--yellow); outline-offset:2px;}
+  .timer{font-family:'Baloo 2'; font-size:28px; color:var(--coral); font-weight:800;}
+  .center{text-align:center;}
+  .muted{color:#7a7290; font-size:13px;}
+  .slot{
+    font-family:'Baloo 2'; font-size:26px; font-weight:800; color:var(--purple);
+    background:linear-gradient(180deg,#fff,#f3efe2); border:3px solid var(--line); border-radius:14px;
+    padding:18px; text-align:center; letter-spacing:1px;
+  }
+  .big-screen{min-height:70vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;}
+  .big-screen img{max-width:90%; max-height:60vh; border:6px solid var(--paper); border-radius:16px; box-shadow:0 0 0 6px var(--purple-2);}
+  .title-reveal{font-family:'Baloo 2'; font-size:38px; color:var(--yellow); text-shadow:3px 3px 0 var(--purple-2);}
+  .backlink{color:var(--paper); opacity:.7; font-size:13px; cursor:pointer; text-decoration:underline; background:none; border:none; box-shadow:none; padding:0;}
+  .grid2{display:grid; grid-template-columns:1fr; gap:16px;}
+  @media(min-width:800px){.grid2{grid-template-columns:1fr 1fr;}}
+  .name-list{max-height:220px; overflow:auto; border:2px solid #eee; border-radius:10px; padding:8px;}
+  .warn{background:#fff3cd; border:2px solid #e0b400; border-radius:10px; padding:8px 12px; font-size:13px; margin-top:8px;}
+  .ok{background:#e6f9f2; border:2px solid var(--mint); border-radius:10px; padding:8px 12px; font-size:13px; margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+/* ---------------- Firebase setup ---------------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyDmEETLJ0Z4KrHaM4xOpp1c4Lxfkqee-Cs",
+  authDomain: "icebreaker-v1-a9496.firebaseapp.com",
+  databaseURL: "https://icebreaker-v1-a9496-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "icebreaker-v1-a9496",
+  storageBucket: "icebreaker-v1-a9496.firebasestorage.app",
+  messagingSenderId: "986863832643",
+  appId: "1:986863832643:web:7103a1f64e7d4c728f8ef6"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/* ---------------- storage helpers (backed by Firebase Realtime Database) ---------------- */
+// Keys like "group:5" or "meta:started" are mapped to DB paths "group/5", "meta/started".
+function toPath(key){ return key.replace(/:/g, '/'); }
+
+async function sget(key, def){
+  try{
+    const snap = await db.ref(toPath(key)).once('value');
+    if(!snap.exists()) return def;
+    const raw = snap.val();
+    if(typeof raw === 'string'){ try{ return JSON.parse(raw); }catch(e){ return raw; } }
+    return raw;
+  }catch(e){ console.error('firebase get failed', key, e); return def; }
+}
+async function sset(key, value){
+  try{ await db.ref(toPath(key)).set(JSON.stringify(value)); return true; }
+  catch(e){ console.error('firebase set failed', key, e); return false; }
+}
+async function sdelete(key){
+  try{ await db.ref(toPath(key)).remove(); return true; }
+  catch(e){ console.error('firebase delete failed', key, e); return false; }
+}
+async function slistIds(node){
+  try{
+    const snap = await db.ref(node).once('value');
+    if(!snap.exists()) return [];
+    return Object.keys(snap.val());
+  }catch(e){ return []; }
+}
+
+/* ---------------- constants ---------------- */
+const CATS = ['space','time','protagonist','sidekick','dialogue'];
+const CAT_LABEL = {space:'空間', time:'時間', protagonist:'主角', sidekick:'配角', dialogue:'對話情境'};
+const CAT_EMOJI = {space:'🏢', time:'⏰', protagonist:'🧑', sidekick:'🐾', dialogue:'💬'};
+const DEFAULT_BANK = {
+  space:['便利商店','公廁隔間','宿舍頂樓','教授研究室','圖書館地下室','夜市烤香腸攤','健身房重訓區','校門口警衛室','KTV包廂','動物園猴子區','醫院急診室','婚紗店試衣間','火鍋店內用區','垃圾集中場','太空站'],
+  time:['凌晨三點','期中考最後十分鐘','世界末日前一分鐘','下課鐘響瞬間','教授點名前一秒','尾牙抽獎時刻','跨年倒數十秒','睡過頭驚醒瞬間','告白後三秒的沉默','全班都在偷睡的下午'],
+  protagonist:['遲到二十分鐘的教授','忘記帶隨身碟的報告人','剛失戀的室友','隱藏富二代的同學','半夜開直播的房東','誤闖教室的外送員','靈魂出竅的班代','穿睡衣的系主任','突然開竅的學霸','喝醉的社團學長姐'],
+  sidekick:['一隻戴眼鏡的貓','會說話的自動販賣機','迷路的外送員','隱形的室友','愛講幹話的語音助理','打瞌睡的教官','突然出現的前任','一群跳舞的鴿子','拿著甘蔗的路人','隔壁棚的直播主'],
+  dialogue:['求婚','跟你借500元','假裝很懂但其實聽不懂','用唱歌的方式道歉','突然講出人生道理','崩潰尖叫','用長輩圖的語氣講話','邊哭邊點餐','用面試官口吻質問','講一個很爛的冷笑話']
+};
+const COLORS = ['#241B3A','#FF6B5E','#3FCFB0','#5EB8FF','#FFD23F','#B15EFF'];
+
+/* ---------------- app state / router ---------------- */
+const root = document.getElementById('app');
+let pollTimer = null;
+function clearPoll(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
+
+function brand(sub){
+  return `<div class="brand"><div class="dot"></div><h1>接力亂畫大會${sub? ' · '+sub:''}</h1></div>`;
+}
+
+function renderRoleSelect(){
+  clearPoll();
+  root.innerHTML = `
+    ${brand('選擇身份')}
+    <div class="role-grid">
+      <div class="role-card" onclick="renderTeacher()"><span class="emoji">🧑‍🏫</span><h3>我是老師</h3><p class="muted">名單、題庫、開局、大螢幕控制</p></div>
+      <div class="role-card" onclick="renderStudentLogin()"><span class="emoji">🎨</span><h3>我是學生</h3><p class="muted">輸入姓名加入小組，輪到你就開畫</p></div>
+      <div class="role-card" onclick="renderProjector()"><span class="emoji">📽️</span><h3>投影大螢幕</h3><p class="muted">給教室投影機用，跟著老師操作揭曉</p></div>
+    </div>`;
+}
+
+/* =========================================================
+   TEACHER
+========================================================= */
+const TEACHER_PASSWORD = 'TNDA2026';
+
+function renderTeacherLogin(){
+  clearPoll();
+  root.innerHTML = `
+    ${brand('老師登入')}
+    <button class="backlink" onclick="renderRoleSelect()">← 回身份選擇</button>
+    <div class="card" style="max-width:380px; margin:30px auto; text-align:center;">
+      <h3>請輸入老師密碼</h3>
+      <div class="row" style="justify-content:center; margin-top:10px;">
+        <input id="teacherPwInput" type="password" placeholder="密碼" style="width:180px;" onkeydown="if(event.key==='Enter') checkTeacherPassword()">
+      </div>
+      <div class="row" style="justify-content:center; margin-top:14px;">
+        <button class="mint" onclick="checkTeacherPassword()">進入控制台</button>
+      </div>
+      <div id="teacherPwMsg" style="margin-top:10px;"></div>
+    </div>
+  `;
+  setTimeout(()=>{ const el=document.getElementById('teacherPwInput'); if(el) el.focus(); }, 50);
+}
+
+function checkTeacherPassword(){
+  const val = document.getElementById('teacherPwInput').value;
+  if(val === TEACHER_PASSWORD){
+    sessionStorage.setItem('teacherAuthed', '1');
+    renderTeacher('roster');
+  }else{
+    document.getElementById('teacherPwMsg').innerHTML = '<div class="warn">密碼錯誤，請再試一次</div>';
+  }
+}
+
+async function renderTeacher(tab){
+  if(sessionStorage.getItem('teacherAuthed') !== '1'){ renderTeacherLogin(); return; }
+  tab = tab || 'roster';
+  clearPoll();
+  root.innerHTML = `
+    ${brand('老師控制台')}
+    <button class="backlink" onclick="renderRoleSelect()">← 回身份選擇</button>
+    <div class="tabs" style="margin-top:14px;">
+      <button class="tab ${tab==='roster'?'active':''}" onclick="renderTeacher('roster')">1. 名單與分組</button>
+      <button class="tab ${tab==='bank'?'active':''}" onclick="renderTeacher('bank')">2. 題目庫</button>
+      <button class="tab ${tab==='control'?'active':''}" onclick="renderTeacher('control')">3. 遊戲控制</button>
+      <button class="tab ${tab==='screen'?'active':''}" onclick="renderTeacher('screen')">4. 大螢幕控制</button>
+    </div>
+    <div id="teacherBody"></div>
+  `;
+  const body = document.getElementById('teacherBody');
+  if(tab==='roster') await teacherRosterTab(body);
+  if(tab==='bank') await teacherBankTab(body);
+  if(tab==='control') await teacherControlTab(body);
+  if(tab==='screen') await teacherScreenTab(body);
+}
+
+/* ---- 1. roster & grouping ---- */
+async function teacherRosterTab(body){
+  const roster = await sget('roster', []);
+  body.innerHTML = `
+    <div class="grid2">
+      <div class="card">
+        <h3>匯入名單（Excel／CSV）</h3>
+        <p class="muted">欄位需含「姓名」與「學程」兩欄（順序不拘）。</p>
+        <input type="file" id="rosterFile" accept=".xlsx,.xls,.csv">
+        <div class="row" style="margin-top:10px;">
+          <button class="mint" onclick="handleRosterUpload()">匯入並加入名單</button>
+        </div>
+        <div id="rosterMsg"></div>
+        <hr style="border:none;border-top:2px dashed #ddd;margin:16px 0;">
+        <h3>手動新增一人</h3>
+        <div class="row">
+          <input id="manualName" placeholder="姓名" style="width:120px;">
+          <input id="manualProgram" placeholder="學程（例：資工系）" style="width:140px;">
+          <button onclick="handleManualAdd()">新增</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>目前名單（共 ${roster.length} 人）</h3>
+        <div class="name-list">
+          <table><thead><tr><th>姓名</th><th>學程</th><th>組別</th><th></th></tr></thead>
+          <tbody>${roster.map((p,i)=>`<tr><td>${p.name}</td><td>${p.program||'—'}</td><td>${p.groupId? '第'+p.groupId+'組('+p.order+')':'—'}</td><td><button class="secondary" style="padding:2px 8px;" onclick="removeRosterPerson(${i})">刪除</button></td></tr>`).join('') || '<tr><td colspan="4" class="muted">尚無名單</td></tr>'}</tbody></table>
+        </div>
+        <div class="row" style="margin-top:12px;">
+          <button class="coral" onclick="clearRoster()">清空名單</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>自動分組</h3>
+      <p class="muted">每組 6 人，系統會盡量平均混合不同學程，避免同組都是同學程。分組後會打亂組內順序（第1~6位）決定接力順序。</p>
+      <div class="row">
+        <button class="sky" onclick="handleAutoGroup()">🎲 自動分組（每組6人，混學程）</button>
+      </div>
+      <div id="groupPreview" style="margin-top:14px;"></div>
+    </div>
+  `;
+  await renderGroupPreview();
+}
+
+async function renderGroupPreview(){
+  const roster = await sget('roster', []);
+  const el = document.getElementById('groupPreview');
+  if(!el) return;
+  const groupIds = [...new Set(roster.filter(p=>p.groupId).map(p=>p.groupId))].sort((a,b)=>a-b);
+  if(groupIds.length===0){ el.innerHTML = '<p class="muted">尚未分組。</p>'; return; }
+  el.innerHTML = `<div class="row" style="flex-wrap:wrap;">` + groupIds.map(gid=>{
+    const members = roster.filter(p=>p.groupId===gid).sort((a,b)=>a.order-b.order);
+    return `<div class="bank-cat" style="min-width:180px;"><h3>第 ${gid} 組</h3>${members.map(m=>`<div class="chip">${m.order}. ${m.name} <span class="muted">(${m.program||'—'})</span></div>`).join('')}</div>`;
+  }).join('') + `</div>`;
+}
+
+async function handleRosterUpload(){
+  const fileInput = document.getElementById('rosterFile');
+  const msg = document.getElementById('rosterMsg');
+  if(!fileInput.files.length){ msg.innerHTML = '<div class="warn">請先選擇檔案</div>'; return; }
+  const file = fileInput.files[0];
+  const buf = await file.arrayBuffer();
+  try{
+    const wb = XLSX.read(buf, {type:'array'});
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, {defval:''});
+    let roster = await sget('roster', []);
+    let added = 0;
+    rows.forEach(r=>{
+      const name = (r['姓名']||r['name']||r['Name']||'').toString().trim();
+      const program = (r['學程']||r['program']||r['Program']||'').toString().trim();
+      if(name){ roster.push({name, program}); added++; }
+    });
+    await sset('roster', roster);
+    msg.innerHTML = `<div class="ok">已匯入 ${added} 筆資料 ✅</div>`;
+    await renderTeacher('roster');
+  }catch(e){
+    msg.innerHTML = '<div class="warn">讀取失敗，請確認檔案格式（需含「姓名」「學程」欄位）</div>';
+  }
+}
+
+async function handleManualAdd(){
+  const name = document.getElementById('manualName').value.trim();
+  const program = document.getElementById('manualProgram').value.trim();
+  if(!name) return;
+  const roster = await sget('roster', []);
+  roster.push({name, program});
+  await sset('roster', roster);
+  await renderTeacher('roster');
+}
+
+async function removeRosterPerson(i){
+  const roster = await sget('roster', []);
+  roster.splice(i,1);
+  await sset('roster', roster);
+  await renderTeacher('roster');
+}
+
+async function clearRoster(){
+  if(!confirm('確定要清空整個名單嗎？這也會清掉分組結果。')) return;
+  await sset('roster', []);
+  const ids = await slistIds('group');
+  for(const id of ids){ await sdelete('group:'+id); }
+  await renderTeacher('roster');
+}
+
+function shuffleArr(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+
+async function handleAutoGroup(){
+  let roster = await sget('roster', []);
+  if(roster.length < 6){ alert('人數不足6人，無法分組'); return; }
+  roster.forEach(p=>{ delete p.groupId; delete p.order; });
+  const programs = [...new Set(roster.map(p=>p.program||'未分類'))];
+  const buckets = {};
+  programs.forEach(p=> buckets[p] = shuffleArr(roster.filter(x=>(x.program||'未分類')===p)));
+  const idx = {}; programs.forEach(p=>idx[p]=0);
+  let groups = []; let current = [];
+  let remaining = roster.length;
+  while(remaining>0){
+    let pickedAny=false;
+    for(const p of shuffleArr(programs)){
+      if(idx[p] < buckets[p].length){
+        current.push(buckets[p][idx[p]]); idx[p]++; remaining--; pickedAny=true;
+        if(current.length===6){ groups.push(current); current=[]; }
+      }
+    }
+    if(!pickedAny) break;
+  }
+  if(current.length) groups.push(current);
+  groups.forEach((g,gi)=>{
+    const order = shuffleArr(g);
+    order.forEach((m,i)=>{ m.groupId = gi+1; m.order = i+1; });
+  });
+  // rebuild flat roster preserving edits
+  const flat = groups.flat();
+  await sset('roster', flat);
+  // clear old group state, create fresh group docs
+  const oldIds = await slistIds('group');
+  for(const id of oldIds){ await sdelete('group:'+id); }
+  for(let gi=0; gi<groups.length; gi++){
+    const gid = gi+1;
+    const members = groups[gi].map(m=>({name:m.name, program:m.program, order:m.order}));
+    await sset('group:'+gid, {
+      id: gid,
+      members,
+      assignments: {},
+      turnIndex: 0,
+      image: null,
+      dialogueText: null,
+      title: null,
+      started: false
+    });
+  }
+  await sset('meta:groupCount', groups.length);
+  alert('分組完成！共 ' + groups.length + ' 組。');
+  await renderTeacher('roster');
+}
+
+/* ---- 2. question bank ---- */
+async function teacherBankTab(body){
+  const bank = await sget('bank', DEFAULT_BANK);
+  body.innerHTML = `
+    <div class="card">
+      <h3>匯入題目（Excel／CSV）</h3>
+      <p class="muted">欄位需含「類別」與「內容」。類別請填：空間／時間／主角／配角／對話情境。</p>
+      <input type="file" id="bankFile" accept=".xlsx,.xls,.csv">
+      <div class="row" style="margin-top:10px;">
+        <button class="mint" onclick="handleBankUpload()">匯入並加入題庫</button>
+        <button class="secondary" onclick="resetBank()">恢復預設題庫</button>
+      </div>
+      <div id="bankMsg"></div>
+    </div>
+    <div class="card">
+      <h3>題目庫（可手動增減）</h3>
+      <div class="grid2">
+        ${CATS.map(c=>`
+          <div class="bank-cat">
+            <h3>${CAT_EMOJI[c]} ${CAT_LABEL[c]}（${(bank[c]||[]).length} 項）</h3>
+            <div>${(bank[c]||[]).map((item,i)=>`<span class="chip">${item}<button onclick="removeBankItem('${c}',${i})">✕</button></span>`).join('')}</div>
+            <div class="row" style="margin-top:8px;">
+              <input id="newItem_${c}" placeholder="新增一項…" style="flex:1; min-width:120px;">
+              <button onclick="addBankItem('${c}')">新增</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+async function handleBankUpload(){
+  const fileInput = document.getElementById('bankFile');
+  const msg = document.getElementById('bankMsg');
+  if(!fileInput.files.length){ msg.innerHTML = '<div class="warn">請先選擇檔案</div>'; return; }
+  const file = fileInput.files[0];
+  const buf = await file.arrayBuffer();
+  const catMap = {'空間':'space','時間':'time','主角':'protagonist','配角':'sidekick','對話情境':'dialogue','對話':'dialogue',
+    'space':'space','time':'time','protagonist':'protagonist','sidekick':'sidekick','dialogue':'dialogue'};
+  try{
+    const wb = XLSX.read(buf, {type:'array'});
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, {defval:''});
+    let bank = await sget('bank', DEFAULT_BANK);
+    let added = 0;
+    rows.forEach(r=>{
+      const catRaw = (r['類別']||r['category']||'').toString().trim();
+      const content = (r['內容']||r['content']||'').toString().trim();
+      const cat = catMap[catRaw];
+      if(cat && content){ bank[cat] = bank[cat]||[]; bank[cat].push(content); added++; }
+    });
+    await sset('bank', bank);
+    msg.innerHTML = `<div class="ok">已匯入 ${added} 筆題目 ✅</div>`;
+    await renderTeacher('bank');
+  }catch(e){
+    msg.innerHTML = '<div class="warn">讀取失敗，請確認欄位格式</div>';
+  }
+}
+
+async function addBankItem(cat){
+  const input = document.getElementById('newItem_'+cat);
+  const val = input.value.trim();
+  if(!val) return;
+  const bank = await sget('bank', DEFAULT_BANK);
+  bank[cat] = bank[cat]||[];
+  bank[cat].push(val);
+  await sset('bank', bank);
+  await renderTeacher('bank');
+}
+async function removeBankItem(cat, i){
+  const bank = await sget('bank', DEFAULT_BANK);
+  bank[cat].splice(i,1);
+  await sset('bank', bank);
+  await renderTeacher('bank');
+}
+async function resetBank(){
+  if(!confirm('確定要恢復成預設題庫嗎？手動增加的題目會被移除。')) return;
+  await sset('bank', DEFAULT_BANK);
+  await renderTeacher('bank');
+}
+
+/* ---- 3. game control ---- */
+async function teacherControlTab(body){
+  const started = await sget('meta:started', false);
+  const timerSec = await sget('meta:timerSec', 20);
+  body.innerHTML = `
+    <div class="card">
+      <h3>遊戲設定</h3>
+      <div class="row">
+        <label>每人畫圖／作答秒數：</label>
+        <input id="timerSecInput" type="number" min="5" max="120" value="${timerSec}" style="width:70px;">
+        <button class="secondary" onclick="saveTimerSec()">儲存秒數</button>
+      </div>
+      <div class="row" style="margin-top:14px;">
+        <button class="mint" ${started? 'disabled':''} onclick="handleStartGame()">🚀 開始遊戲（抽籤並鎖定分組）</button>
+        <button class="coral" onclick="handleResetGame()">🔁 重置所有組的進度（重新開始）</button>
+      </div>
+      ${started? '<div class="ok">遊戲已開始，各組可以開始接力畫圖！</div>' : '<div class="warn">尚未開始，學生端會顯示「等待老師開始遊戲」。</div>'}
+    </div>
+    <div class="card">
+      <h3>各組即時進度</h3>
+      <div id="progressList"><p class="muted">載入中…</p></div>
+    </div>
+  `;
+  await refreshProgress();
+  clearPoll();
+  pollTimer = setInterval(refreshProgress, 3000);
+}
+
+async function saveTimerSec(){
+  const v = parseInt(document.getElementById('timerSecInput').value)||20;
+  await sset('meta:timerSec', v);
+  alert('已儲存：每人 '+v+' 秒');
+}
+
+async function handleStartGame(){
+  const roster = await sget('roster', []);
+  if(!roster.length || !roster[0].groupId){ alert('請先完成自動分組'); return; }
+  const bank = await sget('bank', DEFAULT_BANK);
+  const groupIds = [...new Set(roster.map(p=>p.groupId))];
+  for(const gid of groupIds){
+    const g = await sget('group:'+gid, null);
+    if(!g) continue;
+    const assignments = {};
+    CATS.slice(0,5).forEach((cat, i)=>{
+      const order = i+1;
+      const pool = bank[cat] && bank[cat].length ? bank[cat] : ['（題庫空白）'];
+      const content = pool[Math.floor(Math.random()*pool.length)];
+      assignments[order] = {category: cat, content};
+    });
+    g.assignments = assignments;
+    g.started = true;
+    await sset('group:'+gid, g);
+  }
+  await sset('meta:started', true);
+  alert('已為所有組別抽好題目！開始遊戲 🎉');
+  await renderTeacher('control');
+}
+
+async function handleResetGame(){
+  if(!confirm('確定要重置所有組的畫圖進度嗎？（分組與名單不會被清除）')) return;
+  const groupIds = [...new Set((await sget('roster',[])).map(p=>p.groupId))];
+  for(const gid of groupIds){
+    const g = await sget('group:'+gid, null);
+    if(!g) continue;
+    g.turnIndex = 0; g.image = null; g.title = null; g.dialogueText = null; g.assignments = {}; g.started = false;
+    await sset('group:'+gid, g);
+  }
+  await sset('meta:started', false);
+  await sset('control:screen', {groupId:null, stage:'hidden'});
+  await renderTeacher('control');
+}
+
+async function refreshProgress(){
+  const el = document.getElementById('progressList');
+  if(!el) return;
+  const roster = await sget('roster', []);
+  const groupIds = [...new Set(roster.map(p=>p.groupId).filter(Boolean))].sort((a,b)=>a-b);
+  if(!groupIds.length){ el.innerHTML = '<p class="muted">尚未分組</p>'; return; }
+  let html = '<table><thead><tr><th>組別</th><th>進度</th><th>狀態</th></tr></thead><tbody>';
+  for(const gid of groupIds){
+    const g = await sget('group:'+gid, null);
+    if(!g) continue;
+    const pct = Math.round((g.turnIndex/6)*100);
+    const status = g.turnIndex>=6 ? '✅ 全部完成' : (g.started? `等第 ${g.turnIndex+1} 位` : '未開始');
+    html += `<tr><td>第${gid}組</td><td><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div><span class="muted">${g.turnIndex}/6</span></div></td><td>${status}</td></tr>`;
+  }
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+/* ---- 4. screen control ---- */
+async function teacherScreenTab(body){
+  const roster = await sget('roster', []);
+  const groupIds = [...new Set(roster.map(p=>p.groupId).filter(Boolean))].sort((a,b)=>a-b);
+  const control = await sget('control:screen', {groupId:null, stage:'hidden'});
+  body.innerHTML = `
+    <div class="card">
+      <h3>大螢幕控制</h3>
+      <p class="muted">在教室投影機開啟「投影大螢幕」畫面，這裡選組別並控制要顯示什麼。</p>
+      <div class="row">
+        <label>選擇組別：</label>
+        <select id="screenGroupSelect">
+          <option value="">— 請選擇 —</option>
+          ${groupIds.map(g=>`<option value="${g}" ${control.groupId==g?'selected':''}>第${g}組</option>`).join('')}
+        </select>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <button class="mint" onclick="setScreen('drawing')">🖼️ 顯示畫作</button>
+        <button class="sky" onclick="setScreen('title')">🏷️ 顯示作品名稱</button>
+        <button class="coral" onclick="setScreen('hidden')">🙈 清空螢幕</button>
+      </div>
+      <div id="screenStatus" class="muted" style="margin-top:10px;">目前：${control.stage==='hidden'?'螢幕已清空':(control.groupId?'第'+control.groupId+'組 · '+(control.stage==='title'?'顯示標題':'顯示畫作'):'—')}</div>
+    </div>
+  `;
+}
+
+async function setScreen(stage){
+  const sel = document.getElementById('screenGroupSelect');
+  const gid = sel.value ? parseInt(sel.value) : null;
+  if(stage!=='hidden' && !gid){ alert('請先選擇組別'); return; }
+  await sset('control:screen', {groupId: stage==='hidden'? (gid||null) : gid, stage});
+  await renderTeacher('screen');
+}
+
+/* =========================================================
+   STUDENT
+========================================================= */
+let currentStudent = null; // {name, program, groupId, order}
+
+function renderStudentLogin(){
+  clearPoll();
+  root.innerHTML = `
+    ${brand('學生登入')}
+    <button class="backlink" onclick="renderRoleSelect()">← 回身份選擇</button>
+    <div class="card" style="max-width:420px; margin:30px auto;">
+      <h3 class="center">輸入你的姓名</h3>
+      <p class="muted center">請輸入老師名單上的姓名（需完全一致）</p>
+      <div class="row" style="justify-content:center;">
+        <input id="studentNameInput" placeholder="例如：王小明" style="width:220px;">
+      </div>
+      <div class="row" style="justify-content:center; margin-top:14px;">
+        <button class="mint" onclick="handleStudentLogin()">進入我的小組</button>
+      </div>
+      <div id="loginMsg" class="center" style="margin-top:10px;"></div>
+    </div>
+  `;
+}
+
+async function handleStudentLogin(){
+  const name = document.getElementById('studentNameInput').value.trim();
+  const msg = document.getElementById('loginMsg');
+  if(!name){ return; }
+  const roster = await sget('roster', []);
+  const person = roster.find(p=>p.name===name);
+  if(!person){ msg.innerHTML = '<div class="warn">找不到這個名字，請確認輸入正確（或請老師確認名單）</div>'; return; }
+  if(!person.groupId){ msg.innerHTML = '<div class="warn">老師尚未分組，請稍後再試</div>'; return; }
+  currentStudent = person;
+  renderStudentGroup();
+}
+
+async function renderStudentGroup(){
+  clearPoll();
+  await studentGroupLoop();
+  pollTimer = setInterval(studentGroupLoop, 2000);
+}
+
+async function studentGroupLoop(){
+  const started = await sget('meta:started', false);
+  const g = await sget('group:'+currentStudent.groupId, null);
+  if(!g) return;
+  const myOrder = currentStudent.order;
+  if(g.turnIndex>=6){
+    await renderStudentBigScreenMirror();
+    return;
+  }
+  const isMyTurn = started && g.turnIndex+1 === myOrder && myOrder<=6;
+  // if it's my turn and I haven't been shown the "go" screen yet, render the play screen once
+  if(isMyTurn){
+    if(document.getElementById('studentPlayScreen')) return; // already showing, let inner logic handle
+    renderStudentPlay(g);
+    return;
+  }
+  renderStudentWaiting(g, started);
+}
+
+async function renderStudentBigScreenMirror(){
+  const control = await sget('control:screen', {groupId:null, stage:'hidden'});
+  let inner;
+  if(control.stage==='hidden' || !control.groupId){
+    inner = `
+      <h2 style="color:var(--paper); font-size:30px;">🎉 你們這組已經完成！</h2>
+      <p class="muted" style="color:var(--paper); opacity:.75;">接下來換老師在教室大螢幕公布各組作品，請看前面投影機～</p>
+    `;
+  }else{
+    const cg = await sget('group:'+control.groupId, null);
+    inner = `
+      <p class="pill" style="font-size:16px;">老師正在展示：第 ${control.groupId} 組</p>
+      ${cg && cg.image ? `<img src="${cg.image}">` : ''}
+      ${control.stage==='title' ? `<div class="title-reveal">《${(cg && cg.title) || '（尚未命名）'}》</div>` : ''}
+    `;
+  }
+  root.innerHTML = `
+    ${brand()}
+    <button class="backlink" onclick="clearPoll();renderStudentLogin()">← 換人登入</button>
+    <div class="big-screen">${inner}</div>
+  `;
+}
+
+function renderStudentWaiting(g, started){
+  const myOrder = currentStudent.order;
+  const done = g.turnIndex >= myOrder;
+  root.innerHTML = `
+    ${brand()}
+    <button class="backlink" onclick="clearPoll();renderStudentLogin()">← 換人登入</button>
+    <div class="card" style="max-width:520px; margin:20px auto; text-align:center;">
+      <p class="pill">第 ${currentStudent.groupId} 組 · 你是第 ${myOrder} 位</p>
+      ${!started ? `<h2>等待老師開始遊戲…</h2><p class="muted">老師開始後，會依序輪到每個人喔！</p>` :
+        done ? `<h2>你已經畫完囉 ✅</h2><p class="muted">現在輪到第 ${g.turnIndex+1} 位，請耐心等候</p>` :
+        `<h2>還沒輪到你，先看看大家在畫什麼 👀</h2><p class="muted">目前輪到第 ${g.turnIndex+1} 位（共6位）</p>`}
+      ${g.image ? `<div class="canvas-frame" style="margin-top:14px;"><img src="${g.image}" style="max-width:100%; border-radius:8px; display:block;"></div>` : '<p class="muted">（畫布還是空的）</p>'}
+    </div>
+  `;
+}
+
+function renderStudentPlay(g){
+  const myOrder = currentStudent.order;
+  const isTitleTurn = myOrder===6;
+  const assignment = g.assignments ? g.assignments[myOrder] : null;
+  root.innerHTML = `
+    ${brand()}
+    <div class="card" id="studentPlayScreen" style="max-width:560px; margin:16px auto;">
+      <p class="pill">第 ${currentStudent.groupId} 組 · 輪到你了！（第 ${myOrder} 位）</p>
+      ${isTitleTurn ? renderTitleTurnHTML(g) : renderDrawTurnHTML(g, assignment, myOrder)}
+    </div>
+  `;
+  if(!isTitleTurn){ setupDrawTurn(g, assignment, myOrder); }
+}
+
+/* ---- draw turn (order 1-5) ---- */
+function renderDrawTurnHTML(g, assignment, myOrder){
+  const cat = assignment.category;
+  return `
+    <div class="center">
+      <h2>${CAT_EMOJI[cat]} 你抽到的類別：${CAT_LABEL[cat]}</h2>
+      <div id="slotReveal" class="slot">抽籤中…</div>
+    </div>
+    <div class="center" id="drawArea" style="margin-top:14px; display:none;">
+      <div class="timer" id="timerDisplay"></div>
+      <div class="canvas-frame">
+        <div id="canvasWrap" style="position:relative; display:inline-block;">
+          <canvas id="drawCanvas" width="480" height="360"></canvas>
+        </div>
+      </div>
+      <div class="toolbar center" style="justify-content:center;">
+        ${COLORS.map(c=>`<div class="swatch" style="background:${c}" onclick="setColor('${c}', this)"></div>`).join('')}
+        <button class="secondary" onclick="undoStroke()">↩️ undo</button>
+      </div>
+      ${myOrder===5 ? `
+        <p class="muted">💬 可以打好幾句台詞：蓋章完一句後，再輸入下一句、按一次「放上對話框」即可繼續新增</p>
+        <div class="row" style="justify-content:center; margin-top:8px;">
+          <input id="dialogueInput" placeholder="想個台詞…" style="width:200px;">
+          <button class="sky" onclick="createDialogueBubble()">💬 放上對話框</button>
+        </div>
+        <p class="muted" id="dialogueHint" style="display:none;">👆 拖曳對話框到你想要的位置，滿意後按「蓋章確定」</p>
+        <div class="row" id="stampRow" style="justify-content:center; margin-top:6px; display:none;">
+          <button class="mint" onclick="finalizeDialogueStamp()">🖋️ 蓋章確定位置</button>
+        </div>` : ''}
+      <div class="row" style="justify-content:center; margin-top:14px;">
+        <button class="mint" onclick="submitDrawTurn()">✅ 完成，交給下一位</button>
+      </div>
+    </div>
+  `;
+}
+
+let ctx, canvasEl, drawing=false, lastX=0, lastY=0, currentColor='#241B3A', strokes=[], timerInterval, timeLeft, dialogueBubbleEl=null;
+
+async function setupDrawTurn(g, assignment, myOrder){
+  // slot machine reveal animation
+  const bank = await sget('bank', DEFAULT_BANK);
+  const cat = assignment.category;
+  const pool = (bank[cat]&&bank[cat].length)? bank[cat] : [assignment.content];
+  const revealEl = document.getElementById('slotReveal');
+  let count = 0;
+  const spin = setInterval(()=>{
+    revealEl.textContent = pool[Math.floor(Math.random()*pool.length)];
+    count++;
+    if(count>10){ clearInterval(spin); revealEl.textContent = assignment.content; startDrawArea(g, myOrder); }
+  }, 90);
+}
+
+function startDrawArea(g, myOrder){
+  document.getElementById('drawArea').style.display='block';
+  canvasEl = document.getElementById('drawCanvas');
+  ctx = canvasEl.getContext('2d');
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvasEl.width,canvasEl.height);
+  strokes = [];
+  dialogueBubbleEl = null;
+  if(g.image){
+    const img = new Image();
+    img.onload = ()=>{ ctx.drawImage(img,0,0,canvasEl.width,canvasEl.height); };
+    img.src = g.image;
+  }
+  currentColor = COLORS[0];
+  bindCanvasEvents();
+  startTimer();
+}
+
+function bindCanvasEvents(){
+  const getPos = (e)=>{
+    const rect = canvasEl.getBoundingClientRect();
+    const cx = (e.touches? e.touches[0].clientX : e.clientX) - rect.left;
+    const cy = (e.touches? e.touches[0].clientY : e.clientY) - rect.top;
+    return {x: cx*(canvasEl.width/rect.width), y: cy*(canvasEl.height/rect.height)};
+  };
+  const start = (e)=>{ e.preventDefault(); drawing=true; const p=getPos(e); lastX=p.x; lastY=p.y; strokes.push(canvasEl.toDataURL()); };
+  const move = (e)=>{
+    if(!drawing) return; e.preventDefault();
+    const p = getPos(e);
+    ctx.strokeStyle = currentColor; ctx.lineWidth=5; ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath(); ctx.moveTo(lastX,lastY); ctx.lineTo(p.x,p.y); ctx.stroke();
+    lastX=p.x; lastY=p.y;
+  };
+  const end = ()=>{ drawing=false; };
+  canvasEl.addEventListener('mousedown', start);
+  canvasEl.addEventListener('mousemove', move);
+  canvasEl.addEventListener('mouseup', end);
+  canvasEl.addEventListener('mouseleave', end);
+  canvasEl.addEventListener('touchstart', start, {passive:false});
+  canvasEl.addEventListener('touchmove', move, {passive:false});
+  canvasEl.addEventListener('touchend', end);
+}
+
+function setColor(c, el){
+  currentColor = c;
+  document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function undoStroke(){
+  if(strokes.length===0) return;
+  const last = strokes.pop();
+  const img = new Image();
+  img.onload = ()=>{ ctx.clearRect(0,0,canvasEl.width,canvasEl.height); ctx.drawImage(img,0,0); };
+  img.src = last;
+}
+
+function createDialogueBubble(){
+  const text = document.getElementById('dialogueInput').value.trim();
+  if(!text) return;
+  const wrap = document.getElementById('canvasWrap');
+  if(dialogueBubbleEl){ dialogueBubbleEl.remove(); }
+  const bubble = document.createElement('div');
+  bubble.className = 'dialogue-bubble';
+  bubble.textContent = text;
+  const wrapRect = wrap.getBoundingClientRect();
+  bubble.style.left = (wrapRect.width/2 - 60) + 'px';
+  bubble.style.top = '10px';
+  wrap.appendChild(bubble);
+  dialogueBubbleEl = bubble;
+  makeDraggable(bubble, wrap);
+  document.getElementById('dialogueHint').style.display='block';
+  document.getElementById('stampRow').style.display='flex';
+}
+
+function makeDraggable(el, container){
+  let offsetX=0, offsetY=0, dragging=false;
+  el.style.touchAction = 'none';
+  el.addEventListener('pointerdown', (e)=>{
+    dragging = true;
+    el.setPointerCapture(e.pointerId);
+    const rect = el.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+  });
+  el.addEventListener('pointermove', (e)=>{
+    if(!dragging) return;
+    const crect = container.getBoundingClientRect();
+    let x = e.clientX - crect.left - offsetX;
+    let y = e.clientY - crect.top - offsetY;
+    x = Math.max(0, Math.min(x, crect.width - el.offsetWidth));
+    y = Math.max(0, Math.min(y, crect.height - el.offsetHeight));
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+  });
+  const stop = ()=>{ dragging=false; };
+  el.addEventListener('pointerup', stop);
+  el.addEventListener('pointercancel', stop);
+}
+
+function finalizeDialogueStamp(){
+  if(!dialogueBubbleEl || !canvasEl) return;
+  const wrap = document.getElementById('canvasWrap');
+  const wrapRect = wrap.getBoundingClientRect();
+  const bubbleRect = dialogueBubbleEl.getBoundingClientRect();
+  const scaleX = canvasEl.width / wrapRect.width;
+  const scaleY = canvasEl.height / wrapRect.height;
+  const x = (bubbleRect.left - wrapRect.left) * scaleX;
+  const y = (bubbleRect.top - wrapRect.top) * scaleY;
+  const w = bubbleRect.width * scaleX;
+  const h = bubbleRect.height * scaleY;
+  const text = dialogueBubbleEl.textContent;
+
+  strokes.push(canvasEl.toDataURL());
+  ctx.save();
+  ctx.fillStyle='rgba(255,210,63,0.95)';
+  ctx.strokeStyle='#241B3A'; ctx.lineWidth=3;
+  roundRect(ctx, x, y, w, h, 12); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#241B3A'; ctx.font='bold 16px "Noto Sans TC"'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(text, x+w/2, y+h/2);
+  ctx.restore();
+
+  dialogueBubbleEl.remove();
+  dialogueBubbleEl = null;
+  document.getElementById('dialogueHint').style.display='none';
+  document.getElementById('stampRow').style.display='none';
+  const input = document.getElementById('dialogueInput');
+  if(input) input.value = '';
+}
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+async function startTimer(){
+  const secs = await sget('meta:timerSec', 20);
+  timeLeft = secs;
+  const disp = document.getElementById('timerDisplay');
+  if(disp) disp.textContent = timeLeft + ' 秒';
+  clearInterval(timerInterval);
+  timerInterval = setInterval(()=>{
+    timeLeft--;
+    if(disp) disp.textContent = Math.max(timeLeft,0) + ' 秒';
+    if(timeLeft<=0){ clearInterval(timerInterval); submitDrawTurn(); }
+  }, 1000);
+}
+
+async function submitDrawTurn(){
+  clearInterval(timerInterval);
+  if(!canvasEl) return;
+  const dataUrl = canvasEl.toDataURL('image/png');
+  const g = await sget('group:'+currentStudent.groupId, null);
+  if(!g) return;
+  if(g.turnIndex+1 !== currentStudent.order) { renderStudentGroup(); return; } // already advanced
+  g.image = dataUrl;
+  g.turnIndex = currentStudent.order;
+  await sset('group:'+currentStudent.groupId, g);
+  canvasEl = null;
+  renderStudentGroup();
+}
+
+/* ---- title turn (order 6) ---- */
+function renderTitleTurnHTML(g){
+  return `
+    <div class="center">
+      <h2>🏷️ 最後一棒：幫這幅曠世巨作取個名字！</h2>
+      <div class="canvas-frame" style="margin-top:10px;">
+        <img src="${g.image||''}" style="max-width:100%; border-radius:8px; display:block;">
+      </div>
+      <div class="row" style="justify-content:center; margin-top:14px;">
+        <input id="titleInput" placeholder="輸入作品名稱…" style="width:260px;">
+      </div>
+      <div class="row" style="justify-content:center; margin-top:10px;">
+        <button class="mint" onclick="submitTitle()">✅ 完成落款</button>
+      </div>
+    </div>
+  `;
+}
+
+async function submitTitle(){
+  const title = document.getElementById('titleInput').value.trim();
+  if(!title){ alert('請輸入作品名稱'); return; }
+  const g = await sget('group:'+currentStudent.groupId, null);
+  if(!g) return;
+  g.title = title;
+  g.turnIndex = 6;
+  await sset('group:'+currentStudent.groupId, g);
+  renderStudentGroup();
+}
+
+/* =========================================================
+   PROJECTOR
+========================================================= */
+function renderProjector(){
+  clearPoll();
+  projectorLoop();
+  pollTimer = setInterval(projectorLoop, 2000);
+}
+
+async function projectorLoop(){
+  const control = await sget('control:screen', {groupId:null, stage:'hidden'});
+  if(control.stage==='hidden' || !control.groupId){
+    root.innerHTML = `
+      ${brand('大螢幕')}
+      <button class="backlink" onclick="clearPoll();renderRoleSelect()">← 離開投影模式</button>
+      <div class="big-screen">
+        <h2 style="color:var(--paper); font-size:44px;">🎨 接力亂畫大會 🎲</h2>
+        <p class="muted" style="color:var(--paper); opacity:.7;">等待老師公佈作品…</p>
+      </div>
+    `;
+    return;
+  }
+  const g = await sget('group:'+control.groupId, null);
+  if(!g) return;
+  root.innerHTML = `
+    ${brand('大螢幕')}
+    <button class="backlink" onclick="clearPoll();renderRoleSelect()">← 離開投影模式</button>
+    <div class="big-screen">
+      <p class="pill" style="font-size:16px;">第 ${control.groupId} 組</p>
+      ${g.image ? `<img src="${g.image}">` : '<p class="muted" style="color:var(--paper);">（尚無畫作）</p>'}
+      ${control.stage==='title' ? `<div class="title-reveal">《${g.title||'（尚未命名）'}》</div>` : ''}
+    </div>
+  `;
+}
+
+/* ---------------- init ---------------- */
+renderRoleSelect();
+</script>
+</body>
+</html>
